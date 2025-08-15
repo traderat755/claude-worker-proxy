@@ -4,14 +4,18 @@
     "main": "src/index.ts",
     "compatibility_date": "2025-06-20",
     "vars": {
-        "SMALL_MODEL": "openai/gpt-oss-120b",
-        "MIDDLE_MODEL": "qwen-3-coder-480b",
-        "BIG_MODEL": "gemini-2.5-pro"
+        // Gemini provider configurations
+        "GEMINI_SMALL_MODEL": "gemini/gemini-2.0-flash",
+        "GEMINI_MIDDLE_MODEL": "gemini/gemini-2.5-flash",
+        "GEMINI_BIG_MODEL": "gemini/gemini-2.5-pro",
+
+        // OpenAI provider configurations
+        "OPENAI_SMALL_MODEL": "openai/gpt-oss-120b",
+        "OPENAI_MIDDLE_MODEL": "qwen-3-coder-480b",
+        "OPENAI_BIG_MODEL": "gemini-2.5-pro"
     },
     "observability": {
         "enabled": true
     },
-    "compatibility_flags": [
-        "global_fetch_strictly_public"
-    ]
+    "compatibility_flags": ["global_fetch_strictly_public"]
 }

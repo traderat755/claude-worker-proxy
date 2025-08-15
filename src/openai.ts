@@ -2,6 +2,7 @@ import * as types from './types'
 import * as provider from './provider'
 import * as utils from './utils'
 import { ModelManager } from './model-manager'
+import { OpenAIConfig, getOpenAIConfig } from './openai-config'
 
 export class impl implements provider.Provider {
     private modelManager: ModelManager
@@ -25,6 +26,39 @@ export class impl implements provider.Provider {
             headers,
             body: JSON.stringify(openaiRequest)
         })
+    }
+
+    async countTokens(request: Request, baseUrl: string, apiKey: string): Promise<Response> {
+        try {
+            const claudeRequest = (await request.json()) as types.ClaudeTokenCountRequest
+
+            let totalChars = 0
+
+            for (const msg of claudeRequest.messages) {
+                if (typeof msg.content === 'string') {
+                    totalChars += msg.content.length
+                } else if (Array.isArray(msg.content)) {
+                    for (const block of msg.content) {
+                        if ('text' in block && block.text) {
+                            totalChars += block.text.length
+                        }
+                    }
+                }
+            }
+
+            // Rough estimation: 4 characters per token
+            const estimatedTokens = Math.max(1, Math.floor(totalChars / 4))
+
+            return new Response(JSON.stringify({ input_tokens: estimatedTokens }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            })
+        } catch (error: any) {
+            return new Response(JSON.stringify({ error: error.message }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' }
+            })
+        }
     }
 
     async convertToClaudeResponse(openaiResponse: Response): Promise<Response> {

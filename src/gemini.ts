@@ -2,6 +2,7 @@ import * as types from './types'
 import * as provider from './provider'
 import * as utils from './utils'
 import { ModelManager } from './model-manager'
+import { GeminiConfig, getGeminiConfig } from './gemini-config'
 
 export class impl implements provider.Provider {
     private modelManager: ModelManager
@@ -43,7 +44,9 @@ export class impl implements provider.Provider {
         }
     }
 
-    private convertToGeminiRequestBody(claudeRequest: types.ClaudeRequest): types.GeminiRequest {
+    private convertToGeminiRequestBody(
+        claudeRequest: types.ClaudeRequest | types.ClaudeTokenCountRequest
+    ): types.GeminiRequest {
         const toolUseMap = this.buildToolUseMap(claudeRequest.messages)
         const contents = this.convertMessages(claudeRequest.messages, toolUseMap)
 
@@ -52,10 +55,10 @@ export class impl implements provider.Provider {
             contents
         }
 
-        if (claudeRequest.tools && claudeRequest.tools.length > 0) {
+        if ('tools' in claudeRequest && claudeRequest.tools && claudeRequest.tools.length > 0) {
             geminiRequest.tools = [
                 {
-                    functionDeclarations: claudeRequest.tools.map(tool => ({
+                    functionDeclarations: claudeRequest.tools.map((tool: types.ClaudeTool) => ({
                         name: tool.name,
                         description: tool.description,
                         parameters: utils.cleanJsonSchema(tool.input_schema)
@@ -64,12 +67,12 @@ export class impl implements provider.Provider {
             ]
         }
 
-        if (claudeRequest.temperature !== undefined || claudeRequest.max_tokens !== undefined) {
+        if ('temperature' in claudeRequest || 'max_tokens' in claudeRequest) {
             geminiRequest.generationConfig = {}
-            if (claudeRequest.temperature !== undefined) {
+            if ('temperature' in claudeRequest && claudeRequest.temperature !== undefined) {
                 geminiRequest.generationConfig.temperature = claudeRequest.temperature
             }
-            if (claudeRequest.max_tokens !== undefined) {
+            if ('max_tokens' in claudeRequest && claudeRequest.max_tokens !== undefined) {
                 geminiRequest.generationConfig.maxOutputTokens = claudeRequest.max_tokens
             }
         }
@@ -203,6 +206,39 @@ export class impl implements provider.Provider {
 
         return new Response(JSON.stringify(claudeResponse), {
             status: geminiResponse.status,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+    }
+
+    async countTokens(request: Request, baseUrl: string, apiKey: string): Promise<Response> {
+        const claudeRequest = (await request.json()) as types.ClaudeTokenCountRequest
+        const geminiRequest = this.convertToGeminiRequestBody(claudeRequest)
+
+        const mappedModel = this.modelManager.mapModel(claudeRequest.model)
+        const endpoint = `models/${mappedModel}:countTokens`
+        const finalUrl = utils.buildUrl(baseUrl, endpoint)
+
+        const headers = new Headers()
+        headers.set('x-goog-api-key', apiKey)
+        headers.set('Content-Type', 'application/json')
+
+        const providerRequest = new Request(finalUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(geminiRequest)
+        })
+
+        const providerResponse = await fetch(providerRequest)
+        if (!providerResponse.ok) {
+            return providerResponse
+        }
+
+        const geminiTokenCountResponse = (await providerResponse.json()) as { totalTokens: number }
+
+        return new Response(JSON.stringify({ input_tokens: geminiTokenCountResponse.totalTokens }), {
+            status: 200,
             headers: {
                 'Content-Type': 'application/json'
             }

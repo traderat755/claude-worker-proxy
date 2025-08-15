@@ -34,6 +34,11 @@ export interface ClaudeRequest {
     tools?: ClaudeTool[]
 }
 
+export interface ClaudeTokenCountRequest {
+    model: string
+    messages: ClaudeMessage[]
+}
+
 export interface ClaudeResponse {
     id: string
     type: 'message'
