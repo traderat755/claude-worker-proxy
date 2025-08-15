@@ -1,11 +1,13 @@
 import * as provider from './provider'
 import * as gemini from './gemini'
 import * as openai from './openai'
+import { getConfig, Env } from './config'
+import { ModelManager } from './model-manager'
 
 export default {
     async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
         try {
-            return await handle(request)
+            return await handle(request, env)
         } catch (error) {
             console.error(error)
             return new Response('Internal server error', { status: 500 })
@@ -13,7 +15,9 @@ export default {
     }
 } satisfies ExportedHandler<Env>
 
-async function handle(request: Request): Promise<Response> {
+async function handle(request: Request, env: Env): Promise<Response> {
+    const config = getConfig(env)
+    const modelManager = new ModelManager(config)
     if (request.method !== 'POST') {
         return new Response('Method not allowed', { status: 405 })
     }
@@ -43,10 +47,10 @@ async function handle(request: Request): Promise<Response> {
     let provider: provider.Provider
     switch (typeParam) {
         case 'gemini':
-            provider = new gemini.impl()
+            provider = new gemini.impl(modelManager)
             break
         case 'openai':
-            provider = new openai.impl()
+            provider = new openai.impl(modelManager)
             break
         default:
             return new Response('Unsupported type', { status: 400 })

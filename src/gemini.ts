@@ -1,13 +1,20 @@
 import * as types from './types'
 import * as provider from './provider'
 import * as utils from './utils'
+import { ModelManager } from './model-manager'
 
 export class impl implements provider.Provider {
+    private modelManager: ModelManager
+
+    constructor(modelManager: ModelManager) {
+        this.modelManager = modelManager
+    }
     async convertToProviderRequest(request: Request, baseUrl: string, apiKey: string): Promise<Request> {
         const claudeRequest = (await request.json()) as types.ClaudeRequest
         const geminiRequest = this.convertToGeminiRequestBody(claudeRequest)
 
-        const endpoint = `models/${claudeRequest.model}:${claudeRequest.stream ? 'streamGenerateContent?alt=sse' : 'generateContent'}`
+        const mappedModel = this.modelManager.mapModel(claudeRequest.model)
+        const endpoint = `models/${mappedModel}:${claudeRequest.stream ? 'streamGenerateContent?alt=sse' : 'generateContent'}`
         const finalUrl = utils.buildUrl(baseUrl, endpoint)
 
         const headers = new Headers(request.headers)
@@ -41,7 +48,7 @@ export class impl implements provider.Provider {
         const contents = this.convertMessages(claudeRequest.messages, toolUseMap)
 
         const geminiRequest: types.GeminiRequest = {
-            model: claudeRequest.model,
+            model: this.modelManager.mapModel(claudeRequest.model),
             contents
         }
 

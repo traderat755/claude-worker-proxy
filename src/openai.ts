@@ -1,8 +1,15 @@
 import * as types from './types'
 import * as provider from './provider'
 import * as utils from './utils'
+import { ModelManager } from './model-manager'
 
 export class impl implements provider.Provider {
+    private modelManager: ModelManager
+
+    constructor(modelManager: ModelManager) {
+        this.modelManager = modelManager
+    }
+
     async convertToProviderRequest(request: Request, baseUrl: string, apiKey: string): Promise<Request> {
         const claudeRequest = (await request.json()) as types.ClaudeRequest
         const openaiRequest = this.convertToOpenAIRequestBody(claudeRequest)
@@ -37,7 +44,7 @@ export class impl implements provider.Provider {
 
     private convertToOpenAIRequestBody(claudeRequest: types.ClaudeRequest): types.OpenAIRequest {
         const openaiRequest: types.OpenAIRequest = {
-            model: claudeRequest.model,
+            model: this.modelManager.mapModel(claudeRequest.model),
             messages: this.convertMessages(claudeRequest.messages),
             stream: claudeRequest.stream
         }

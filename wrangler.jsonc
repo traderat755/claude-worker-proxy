@@ -3,7 +3,11 @@
     "name": "claude-worker-proxy",
     "main": "src/index.ts",
     "compatibility_date": "2025-06-20",
-    "vars": {},
+    "vars": {
+        "SMALL_MODEL": "openai/gpt-oss-120b",
+        "MIDDLE_MODEL": "qwen-3-coder-480b",
+        "BIG_MODEL": "gemini-2.5-pro"
+    },
     "observability": {
         "enabled": true
     },
